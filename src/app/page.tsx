@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -39,7 +39,8 @@ type Page =
   | "Workers"
   | "Repairs"
   | "Analytics"
-  | "Impact";
+  | "Impact"
+  | "Settings";
 
 const navItems: {
   name: Page;
@@ -52,6 +53,7 @@ const navItems: {
   { name: "Repairs", icon: Wrench },
   { name: "Analytics", icon: BarChart3 },
   { name: "Impact", icon: Globe2 },
+  { name: "Settings", icon: Settings },
 ];
 
 const workers = [
@@ -83,8 +85,8 @@ const workers = [
     name: "Anjali Devi",
     status: "Available",
     color: "green",
-    incident: "â€”",
-    sector: "â€”",
+    incident: "—",
+    sector: "—",
     initials: "AD",
   },
 ];
@@ -163,7 +165,7 @@ function SectionTitle({
 
       {action && (
         <button className="text-[10px] font-medium text-cyan-300 transition hover:text-white">
-          {action} â†’
+          {action}
         </button>
       )}
     </div>
@@ -295,10 +297,7 @@ function Sidebar({
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 p-4">
-          <button className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-xs text-slate-400 hover:bg-white/[0.04] hover:text-white">
-            <Settings size={18} />
-            Settings
-          </button>
+
 
           <div className="mt-3 flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.025] p-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-cyan-300/10 text-xs font-bold text-cyan-300">
@@ -325,6 +324,7 @@ function Sidebar({
 /* ----------------------------- */
 
 function TopBar({ setOpen }: { setOpen: (value: boolean) => void }) {
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   return (
     <header className="sticky top-0 z-30 flex h-[72px] items-center border-b border-white/10 bg-[#020b12]/80 px-4 backdrop-blur-2xl lg:ml-[245px] lg:px-7">
       <button
@@ -347,12 +347,20 @@ function TopBar({ setOpen }: { setOpen: (value: boolean) => void }) {
           </span>
         </div>
 
-        <button className="relative rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white">
+        <button onClick={() => setNotificationsOpen(!notificationsOpen)} className="relative rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white">
           <Bell size={18} />
           <span className="absolute right-0 top-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white">
             3
           </span>
         </button>
+
+        {notificationsOpen && (
+          <div className="absolute right-16 top-16 z-50 w-72 rounded-xl border border-white/10 bg-[#06151f] p-4 shadow-2xl">
+            <p className="text-sm font-semibold text-white">Notifications</p>
+            <p className="mt-2 text-xs leading-5 text-slate-400">Check the Incidents page for active water-loss alerts and repair updates.</p>
+            <button onClick={() => setNotificationsOpen(false)} className="mt-3 text-xs text-cyan-300 hover:text-cyan-200">Close</button>
+          </div>
+        )}
 
         <div className="flex h-8 w-8 items-center justify-center rounded-full border border-violet-300/20 bg-violet-500/20 text-[10px] font-bold text-violet-200">
           K
@@ -415,10 +423,7 @@ function Hero() {
         </p>
 
         <div className="mt-7 flex flex-wrap items-center gap-3">
-          <button className="flex items-center gap-3 rounded-xl bg-cyan-300 px-6 py-3.5 text-xs font-bold text-[#021017] shadow-[0_0_35px_rgba(34,211,238,.25)] transition hover:bg-cyan-200 hover:shadow-[0_0_55px_rgba(34,211,238,.45)]">
-            View Live Network
-            <ChevronRight size={16} />
-          </button>
+          
           <button className="flex items-center gap-2 rounded-xl border border-cyan-300/25 bg-white/[0.04] px-5 py-3.5 text-xs font-semibold text-cyan-300 backdrop-blur transition hover:border-cyan-300/50 hover:bg-white/[0.07]">
             <Activity size={14} />
             Live Status
@@ -468,7 +473,7 @@ function Hero() {
       </div>
 
       {/* INFRASTRUCTURE LABELS */}
-      <div className="absolute bottom-[25%] left-[23%] z-20 hidden rounded-xl border border-cyan-300/25 bg-[#03141be8] px-4 py-3 backdrop-blur-xl md:block">
+      <div className="absolute right-2 top-[45%] z-20 hidden rounded-xl border border-cyan-300/25 bg-[#03141be8] px-4 py-3 backdrop-blur-xl md:block lg:right-8">
         <div className="flex items-center gap-3">
           <Waves className="text-cyan-300" size={20} />
           <div>
@@ -541,7 +546,7 @@ function Hero() {
               Leak Detected
             </div>
             <div className="text-[10px] text-slate-300">
-              Sector 03 Â· WG-042
+              Sector 03 · WG-042
             </div>
           </div>
         </div>
@@ -1053,71 +1058,137 @@ function IncidentsPanel({
 /* WORKERS */
 /* ----------------------------- */
 
-function WorkersPanel() {
+function WorkersPanel({
+  workers: realWorkers,
+  incidents: realIncidents,
+}: {
+  workers: { id: string; name: string; role: string; status: string }[];
+  incidents: {
+    id: string;
+    sensor_id: string;
+    description: string;
+    status: string;
+    assigned_worker_id: string | null;
+  }[];
+}) {
+  const [selectedWorker, setSelectedWorker] = useState<(typeof realWorkers)[number] | null>(null);
+
+  const selectedIncidents = selectedWorker
+    ? realIncidents.filter((incident) => incident.assigned_worker_id === selectedWorker.id)
+    : [];
+
   return (
     <Glass className="p-5">
       <SectionTitle
         icon={Users}
         title="Maintenance Workers"
-        subtitle="Field operations"
+        subtitle="Worker records from Supabase"
         action="View All"
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {workers.map((worker) => (
-          <motion.div
-            key={worker.name}
-            whileHover={{ y: -3 }}
-            className="rounded-xl border border-white/10 bg-white/[0.025] p-4"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full border border-cyan-300/20 bg-cyan-300/10 text-xs font-bold text-cyan-300">
-                {worker.initials}
-              </div>
+      {realWorkers.length === 0 ? (
+        <p className="text-sm text-slate-400">No worker records loaded.</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {realWorkers.map((worker) => {
+            const assignedCount = realIncidents.filter(
+              (incident) => incident.assigned_worker_id === worker.id
+            ).length;
 
-              <div className="min-w-0">
-                <div className="truncate text-xs font-semibold text-white">
-                  {worker.name}
-                </div>
-
-                <div className="mt-1 flex items-center gap-1.5 text-[9px]">
-                  <StatusDot
-                    status={
-                      worker.color as
-                        | "green"
-                        | "blue"
-                        | "orange"
-                        | "red"
-                    }
-                  />
-                  <span className="text-slate-400">
+            return (
+              <div
+                key={worker.id}
+                className="rounded-xl border border-white/10 bg-white/[0.025] p-4"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-sm font-semibold text-white">
+                      {worker.name}
+                    </h3>
+                    <p className="mt-1 text-xs text-slate-400">{worker.role}</p>
+                  </div>
+                  <span className="rounded-full border border-cyan-300/20 px-2 py-1 text-[10px] text-cyan-200">
                     {worker.status}
                   </span>
                 </div>
+
+                <div className="mt-4 border-t border-white/10 pt-3">
+                  <p className="text-xs text-slate-400">
+                    Assigned incidents: <span className="text-white">{assignedCount}</span>
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedWorker(worker)}
+                  className="mt-3 w-full rounded-lg border border-cyan-300/20 px-3 py-2 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-300/10"
+                >
+                  View Worker
+                </button>
               </div>
+            );
+          })}
+        </div>
+      )}
+
+      {selectedWorker && (
+        <div className="mt-5 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.04] p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-white">
+                {selectedWorker.name}
+              </h3>
+              <p className="mt-1 text-xs text-slate-400">Worker details from Supabase</p>
             </div>
-
-            <div className="mt-4 border-t border-white/10 pt-3">
-              <div className="text-[9px] uppercase tracking-widest text-slate-600">
-                Assignment
-              </div>
-
-              <div className="mt-1 text-xs text-slate-300">
-                {worker.incident}
-                {worker.sector !== "â€”" && ` Â· ${worker.sector}`}
-              </div>
-            </div>
-
-            <button className="mt-3 w-full rounded-lg border border-cyan-300/20 py-2 text-[9px] font-semibold text-cyan-300 transition hover:bg-cyan-300/10">
-              View Worker
+            <button
+              type="button"
+              onClick={() => setSelectedWorker(null)}
+              className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/5"
+            >
+              Close
             </button>
-          </motion.div>
-        ))}
-      </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border border-white/10 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-slate-500">Role</p>
+              <p className="mt-1 text-sm text-white">{selectedWorker.role}</p>
+            </div>
+            <div className="rounded-lg border border-white/10 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-slate-500">Status</p>
+              <p className="mt-1 text-sm text-white">{selectedWorker.status}</p>
+            </div>
+            <div className="rounded-lg border border-white/10 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-slate-500">Assigned incidents</p>
+              <p className="mt-1 text-sm text-white">{selectedIncidents.length}</p>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <h4 className="text-xs font-semibold text-white">Assigned incidents</h4>
+            {selectedIncidents.length === 0 ? (
+              <p className="mt-2 text-xs text-slate-400">
+                No incidents are currently assigned to this worker.
+              </p>
+            ) : (
+              <div className="mt-2 space-y-2">
+                {selectedIncidents.map((incident) => (
+                  <div key={incident.id} className="rounded-lg border border-white/10 p-3">
+                    <p className="text-xs font-medium text-white">
+                      Sensor: {incident.sensor_id}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-300">{incident.description}</p>
+                    <p className="mt-1 text-xs text-cyan-200">Status: {incident.status}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </Glass>
   );
 }
-
 /* ----------------------------- */
 /* REPAIR WORKFLOW */
 /* ----------------------------- */
@@ -1282,10 +1353,10 @@ function Dashboard({
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr_1fr_.85fr]">
           <FlowAnalytics />
           <NetworkMap />
-          <IncidentsPanel incidents={dashboardData?.incidents ?? []} workers={dashboardData?.workers ?? []} />
+
         </div>
 
-        <WorkersPanel />
+        <WorkersPanel workers={dashboardData?.workers ?? []} incidents={dashboardData?.incidents ?? []} />
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1fr_1fr]">
           <RepairWorkflow />
@@ -1359,80 +1430,300 @@ function Dashboard({
 /* GENERIC PAGES */
 /* ----------------------------- */
 
-function PlaceholderPage({
+function OperationalPage({
   page,
   icon: Icon,
+  dashboardData,
 }: {
   page: string;
   icon: LucideIcon;
+  dashboardData: {
+    workers: { id: string; name: string; role: string; status: string }[];
+    sensors: {
+      id: string;
+      location: string;
+      flow_rate: number;
+      status: string;
+      last_reading_at: string;
+      expected_flow: number;
+    }[];
+    incidents: {
+      id: string;
+      sensor_id: string;
+      description: string;
+      status: string;
+      assigned_worker_id: string | null;
+      verified_at?: string | null;
+    }[];
+  } | null;
 }) {
-  return (
-    <div className="p-5 lg:p-8">
-      <div className="mb-7">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/10">
-            <Icon size={21} className="text-cyan-300" />
-          </div>
+  const incidents = dashboardData?.incidents ?? [];
+  const workers = dashboardData?.workers ?? [];
+  const sensors = dashboardData?.sensors ?? [];
+  const activeStatuses = ["DETECTED", "OPEN", "ASSIGNED", "IN_REPAIR", "VERIFYING", "REOPENED"];
+  const activeIncidents = incidents.filter((incident) => activeStatuses.includes(incident.status));
+  const verifiedIncidents = incidents.filter(
+    (incident) => incident.status === "VERIFIED" || Boolean(incident.verified_at)
+  );
+  const abnormalSensors = sensors.filter(
+    (sensor) => sensor.status !== "NORMAL"
+  );
 
-          <div>
-            <h1 className="text-2xl font-bold text-white">{page}</h1>
-            <p className="mt-1 text-xs text-slate-500">
-              WaterGuard operational intelligence
-            </p>
-          </div>
+  const heading = (
+    <div className="flex items-center gap-3">
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/10">
+        <Icon size={21} className="text-cyan-300" />
+      </div>
+      <div>
+        <h1 className="text-2xl font-bold text-white">{page}</h1>
+        <p className="mt-1 text-sm text-slate-400">Live data from WaterGuard Supabase records</p>
+      </div>
+    </div>
+  );
+
+  if (page === "Incidents") {
+    return (
+      <div className="space-y-5 p-5 lg:p-8">
+        {heading}
+        <IncidentsPanel incidents={incidents} workers={workers} />
+      </div>
+    );
+  }
+
+  if (page === "Workers") {
+    return (
+      <div className="space-y-5 p-5 lg:p-8">
+        {heading}
+        <Glass className="p-5">
+          {workers.length === 0 ? (
+            <p className="text-sm text-slate-400">No worker records found.</p>
+          ) : (
+            <div className="space-y-3">
+              {workers.map((worker) => {
+                const assigned = incidents.filter((incident) => incident.assigned_worker_id === worker.id);
+                return (
+                  <div key={worker.id} className="rounded-xl border border-white/10 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h2 className="font-semibold text-white">{worker.name}</h2>
+                        <p className="mt-1 text-xs text-slate-400">{worker.role}</p>
+                      </div>
+                      <span className="rounded-full border border-cyan-300/20 px-3 py-1 text-xs text-cyan-200">{worker.status}</span>
+                    </div>
+                    <p className="mt-3 text-xs text-slate-400">Assigned incidents: {assigned.length}</p>
+                    {assigned.map((incident) => (
+                      <p key={incident.id} className="mt-2 text-xs text-slate-300">
+                        Sensor {incident.sensor_id} · {incident.status} — {incident.description}
+                      </p>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Glass>
+      </div>
+    );
+  }
+
+  if (page === "Live Network") {
+    return (
+      <div className="space-y-5 p-5 lg:p-8">
+        {heading}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Glass className="p-4"><p className="text-xs text-slate-400">Sensors in database</p><p className="mt-2 text-2xl font-semibold text-white">{sensors.length}</p></Glass>
+          <Glass className="p-4"><p className="text-xs text-slate-400">Non-normal sensor status</p><p className="mt-2 text-2xl font-semibold text-orange-300">{abnormalSensors.length}</p></Glass>
+          <Glass className="p-4"><p className="text-xs text-slate-400">Active incidents</p><p className="mt-2 text-2xl font-semibold text-white">{activeIncidents.length}</p></Glass>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-        {[
-          ["Live Status", "Operational"],
-          ["Connected Sensors", "12"],
-          ["Active Records", "03"],
-        ].map(([label, value]) => (
-          <Glass key={label} className="p-5">
-            <div className="text-[9px] uppercase tracking-widest text-slate-500">
-              {label}
+        <Glass className="overflow-hidden p-5">
+          <h2 className="mb-4 text-sm font-semibold text-white">Sensor readings</h2>
+          {sensors.length === 0 ? (
+            <p className="text-sm text-slate-400">No sensors found in Supabase.</p>
+          ) : (
+            <div className="space-y-3">
+              {sensors.map((sensor) => (
+                <div key={sensor.id} className="rounded-xl border border-white/10 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-white">{sensor.id}</h3>
+                      <p className="mt-1 text-xs text-slate-400">{sensor.location || "Location not recorded"}</p>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-xs ${sensor.status === "NORMAL" ? "bg-emerald-400/10 text-emerald-300" : "bg-orange-400/10 text-orange-300"}`}>
+                      {sensor.status || "UNKNOWN"}
+                    </span>
+                  </div>
+                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div><p className="text-[10px] text-slate-500">Current flow</p><p className="mt-1 text-sm text-white">{Number(sensor.flow_rate).toFixed(2)} L/min</p></div>
+                    <div><p className="text-[10px] text-slate-500">Expected flow</p><p className="mt-1 text-sm text-white">{Number(sensor.expected_flow).toFixed(2)} L/min</p></div>
+                    <div><p className="text-[10px] text-slate-500">Last reading</p><p className="mt-1 text-xs text-white">{sensor.last_reading_at ? new Date(sensor.last_reading_at).toLocaleString() : "Not recorded"}</p></div>
+                  </div>
+                </div>
+              ))}
             </div>
-
-            <div className="mt-3 text-2xl font-semibold text-white">
-              {value}
-            </div>
-          </Glass>
-        ))}
+          )}
+        </Glass>
       </div>
+    );
+  }
 
-      <Glass className="mt-5 flex min-h-[350px] items-center justify-center p-8">
-        <div className="text-center">
-          <Icon
-            size={42}
-            className="mx-auto text-cyan-300 opacity-60"
-          />
+  if (page === "Repairs") {
+    const repairIncidents = incidents.filter((incident) =>
+      ["ASSIGNED", "IN_REPAIR", "VERIFYING", "REOPENED", "VERIFIED"].includes(incident.status)
+    );
+    return (
+      <div className="space-y-5 p-5 lg:p-8">
+        {heading}
+        <Glass className="p-5">
+          <h2 className="mb-4 text-sm font-semibold text-white">Repair workflow</h2>
+          {repairIncidents.length === 0 ? (
+            <p className="text-sm text-slate-400">No repair-stage incidents are currently recorded.</p>
+          ) : (
+            <div className="space-y-3">
+              {repairIncidents.map((incident) => {
+                const worker = workers.find((item) => item.id === incident.assigned_worker_id);
+                return (
+                  <div key={incident.id} className="rounded-xl border border-white/10 p-4">
+                    <div className="flex flex-wrap justify-between gap-2">
+                      <p className="text-sm font-semibold text-white">Sensor {incident.sensor_id}</p>
+                      <span className="text-xs text-cyan-200">{incident.status}</span>
+                    </div>
+                    <p className="mt-2 text-xs text-slate-300">{incident.description}</p>
+                    <p className="mt-2 text-xs text-slate-400">Assigned worker: {worker?.name ?? "Not assigned"}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Glass>
+      </div>
+    );
+  }
 
-          <h2 className="mt-5 text-lg font-semibold text-white">
-            {page} Control Center
-          </h2>
+  if (page === "Analytics") {
+    const statusCounts = incidents.reduce<Record<string, number>>((counts, incident) => {
+      counts[incident.status] = (counts[incident.status] ?? 0) + 1;
+      return counts;
+    }, {});
+    return (
+      <div className="space-y-5 p-5 lg:p-8">
+        {heading}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            ["Sensors recorded", sensors.length],
+            ["Workers recorded", workers.length],
+            ["Total incidents", incidents.length],
+            ["Verified incidents", verifiedIncidents.length],
+          ].map(([label, value]) => (
+            <Glass key={label} className="p-5">
+              <p className="text-xs text-slate-400">{label}</p>
+              <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
+            </Glass>
+          ))}
+        </div>
+        <Glass className="p-5">
+          <h2 className="mb-4 text-sm font-semibold text-white">Incident status breakdown</h2>
+          {Object.keys(statusCounts).length === 0 ? (
+            <p className="text-sm text-slate-400">No incident records available to analyze.</p>
+          ) : (
+            <div className="space-y-3">
+              {Object.entries(statusCounts).map(([status, count]) => (
+                <div key={status} className="flex items-center justify-between rounded-lg border border-white/10 p-3">
+                  <span className="text-xs text-slate-300">{status}</span>
+                  <span className="text-sm font-semibold text-white">{count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Glass>
+      </div>
+    );
+  }
 
-          <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-slate-500">
-            This module is ready for the real WaterGuard data layer.
-            We will connect sensors, incidents, workers and AWS
-            services here.
+  if (page === "Impact") {
+    return (
+      <div className="space-y-5 p-5 lg:p-8">
+        {heading}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Glass className="p-5"><p className="text-xs text-slate-400">Verified incidents</p><p className="mt-2 text-2xl font-semibold text-emerald-300">{verifiedIncidents.length}</p></Glass>
+          <Glass className="p-5"><p className="text-xs text-slate-400">Open or active incidents</p><p className="mt-2 text-2xl font-semibold text-orange-300">{activeIncidents.length}</p></Glass>
+          <Glass className="p-5"><p className="text-xs text-slate-400">Sensors tracked</p><p className="mt-2 text-2xl font-semibold text-white">{sensors.length}</p></Glass>
+        </div>
+        <Glass className="p-5">
+          <h2 className="text-sm font-semibold text-white">Impact measurement</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            Verified incident count reflects recorded repair verification. Litres saved and money saved are not calculated because the current data shown here does not establish leak duration or a measured volume saved.
           </p>
+        </Glass>
+      </div>
+    );
+  }
+
+  if (page === "Settings") {
+    return (
+      <div className="space-y-5 p-5 lg:p-8">
+        {heading}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Glass className="p-5">
+            <p className="text-xs text-slate-400">Sensors tracked</p>
+            <p className="mt-2 text-2xl font-semibold text-white">{sensors.length}</p>
+          </Glass>
+          <Glass className="p-5">
+            <p className="text-xs text-slate-400">Active incidents</p>
+            <p className="mt-2 text-2xl font-semibold text-orange-300">{activeIncidents.length}</p>
+          </Glass>
+          <Glass className="p-5">
+            <p className="text-xs text-slate-400">Workers registered</p>
+            <p className="mt-2 text-2xl font-semibold text-white">{workers.length}</p>
+          </Glass>
         </div>
+        <Glass className="space-y-4 p-5">
+          <h2 className="text-sm font-semibold text-white">System connection</h2>
+          <p className="text-sm text-slate-400">WaterGuard loads these figures from the dashboard API and Supabase.</p>
+          <button onClick={() => window.location.reload()} className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-sm text-cyan-200 hover:bg-cyan-300/20">
+            Refresh dashboard data
+          </button>
+        </Glass>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-5 p-5 lg:p-8">
+      {heading}
+      <Glass className="p-5">
+        <p className="text-sm text-slate-300">No live data view is configured for this page yet.</p>
       </Glass>
     </div>
   );
 }
-
 /* ----------------------------- */
 /* APP */
 /* ----------------------------- */
 
 export default function Home() {
   const [current, setCurrent] = useState<Page>("Dashboard");
+
+  useEffect(() => {
+    const handleNavigation = (event: Event) => {
+      const page = (event as CustomEvent<string>).detail;
+      if (["Dashboard", "Live Network", "Incidents", "Workers", "Repairs", "Analytics", "Impact"].includes(page)) {
+        setCurrent(page as Page);
+      }
+    };
+    window.addEventListener("waterguard-navigate", handleNavigation);
+    return () => window.removeEventListener("waterguard-navigate", handleNavigation);
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [dashboardData, setDashboardData] = useState<{
     workers: { id: string; name: string; role: string; status: string }[];
+    sensors: {
+      id: string;
+      location: string;
+      flow_rate: number;
+      status: string;
+      last_reading_at: string;
+      expected_flow: number;
+    }[];
     incidents: {
       id: string;
       sensor_id: string;
@@ -1451,6 +1742,7 @@ export default function Home() {
         if (result.success) {
           setDashboardData({
             workers: result.workers ?? [],
+            sensors: result.sensors ?? [],
             incidents: result.incidents ?? [],
           });
         }
@@ -1470,6 +1762,7 @@ export default function Home() {
     Repairs: Wrench,
     Analytics: BarChart3,
     Impact: Globe2,
+    Settings: Settings,
   };
 
   return (
@@ -1501,9 +1794,10 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
             >
-              <PlaceholderPage
+              <OperationalPage
                 page={current}
                 icon={pageIcons[current]}
+                dashboardData={dashboardData}
               />
             </motion.div>
           )}
@@ -1512,6 +1806,7 @@ export default function Home() {
     </main>
   );
 }
+
 
 
 
