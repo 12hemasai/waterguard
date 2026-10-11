@@ -1,36 +1,87 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+﻿# WaterGuard 💧
+### Smart Water-Leak Detection and Repair Verification
 
-## Getting Started
+WaterGuard is a water-loss monitoring and maintenance system that detects abnormal water flow, creates incidents, coordinates field workers, and verifies repairs using consecutive normal sensor readings.
 
-First, run the development server:
+## Problem
+Water leaks can go unnoticed, repairs can be delayed, and a reported repair may not actually resolve the leak.
+
+## Solution
+WaterGuard connects sensor telemetry to an incident-management workflow. It tracks leaks from detection through worker assignment, repair submission, and sensor-based verification.
+
+## Key Features
+- **Sensor Monitoring:** Receive flow readings and compare them with expected flow.
+- **Leak Detection:** Detect abnormal high-flow readings.
+- **Incident Management:** Create and track water-leak incidents.
+- **Worker Assignment:** Assign incidents to maintenance workers.
+- **Repair Workflow:** Record repair submissions.
+- **Automatic Verification:** Verify a repair after three consecutive normal readings.
+- **Reopening:** Reopen an incident if high flow persists after repair submission.
+- **Dashboard:** View sensors, incidents, statuses, and workers.
+
+## Technology Stack
+- Next.js and React
+- TypeScript
+- Tailwind CSS
+- Supabase and PostgreSQL
+- REST API routes
+- Sensor telemetry simulation for testing
+
+## Workflow
+1. A sensor sends its flow reading.
+2. The API compares the reading against the expected flow.
+3. Abnormal flow creates a water-leak incident.
+4. A supervisor assigns a maintenance worker.
+5. The worker submits the repair.
+6. WaterGuard evaluates subsequent sensor readings.
+7. Three consecutive normal readings mark the incident as verified.
+8. Persistent high flow causes the incident to be reopened.
+
+## Run Locally
+
+### Prerequisites
+- Node.js and npm
+- A Supabase project with the required tables and policies
+
+### Installation
+
+```bash
+npm install
+```
+
+Configure your local `.env.local` file with the Supabase environment variables expected by the application. Never commit credentials or secret keys.
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### TypeScript Check
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npx tsc --noEmit
+```
 
-## Learn More
+## Demo Checklist
+- Show a normal sensor reading.
+- Send an abnormal reading and show the generated incident.
+- Assign the incident to a worker.
+- Submit a repair.
+- Send three consecutive normal readings.
+- Confirm the incident becomes `VERIFIED` and its verification timestamp is saved.
+- Demonstrate reopening when high flow persists after a repair.
 
-To learn more about Next.js, take a look at the following resources:
+## Project Status
+WaterGuard includes a working telemetry and incident-management prototype. Deployment configuration and any additional cloud integrations should be verified before presenting them as implemented.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Future Improvements
+- Integrate production sensor devices.
+- Expand cloud-based event processing and notifications.
+- Add authentication and role-based access control.
+- Deploy a production dashboard and monitoring infrastructure.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+Built for a water-conservation and infrastructure-maintenance use case.

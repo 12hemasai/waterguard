@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Activity,
@@ -83,8 +83,8 @@ const workers = [
     name: "Anjali Devi",
     status: "Available",
     color: "green",
-    incident: "—",
-    sector: "—",
+    incident: "â€”",
+    sector: "â€”",
     initials: "AD",
   },
 ];
@@ -163,7 +163,7 @@ function SectionTitle({
 
       {action && (
         <button className="text-[10px] font-medium text-cyan-300 transition hover:text-white">
-          {action} →
+          {action} â†’
         </button>
       )}
     </div>
@@ -541,7 +541,7 @@ function Hero() {
               Leak Detected
             </div>
             <div className="text-[10px] text-slate-300">
-              Sector 03 · WG-042
+              Sector 03 Â· WG-042
             </div>
           </div>
         </div>
@@ -904,90 +904,146 @@ function NetworkMap() {
 /* INCIDENTS */
 /* ----------------------------- */
 
-function IncidentsPanel() {
+function IncidentsPanel({
+  incidents: realIncidents,
+  workers: realWorkers,
+}: {
+  incidents: {
+    id: string;
+    sensor_id: string;
+    description: string;
+    status: string;
+    assigned_worker_id: string | null;
+  }[];
+  workers: {
+    id: string;
+    name: string;
+    role: string;
+    status: string;
+  }[];
+}) {
+  const [selectedWorkers, setSelectedWorkers] = useState<Record<string, string>>({});
+  const [assigningId, setAssigningId] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+
+  async function assignWorker(incidentId: string) {
+    const workerId = selectedWorkers[incidentId];
+
+    if (!workerId) {
+      setMessage("Please select a worker first.");
+      return;
+    }
+
+    setAssigningId(incidentId);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/incidents/assign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ incidentId, workerId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Assignment failed.");
+      }
+
+      setMessage(result.message || "Worker assigned successfully.");
+      window.location.reload();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Assignment failed.");
+    } finally {
+      setAssigningId(null);
+    }
+  }
+
   return (
     <Glass className="p-5">
       <SectionTitle
         icon={AlertTriangle}
         title="Active Incidents"
-        subtitle="Requires attention"
+        subtitle="Live Supabase incidents"
         action="View All"
       />
 
-      <div className="space-y-2.5">
-        {incidents.map((incident, index) => (
-          <motion.div
-            key={incident.id}
-            whileHover={{ x: 4, scale: 1.01 }}
-            className={`relative overflow-hidden rounded-xl border p-3.5 ${
-              incident.severity === "critical"
-                ? "border-red-400/40 bg-red-500/[0.07]"
-                : incident.severity === "warning"
-                  ? "border-orange-400/30 bg-orange-500/[0.05]"
-                  : "border-white/10 bg-white/[0.025]"
-            }`}
-          >
-            {/* left accent bar */}
-            <div className={`absolute left-0 top-0 h-full w-0.5 rounded-l-xl ${
-              incident.severity === "critical" ? "bg-red-400" : incident.severity === "warning" ? "bg-orange-400" : "bg-cyan-300/40"
-            }`} />
+      {message && (
+        <div className="mb-3 rounded-lg border border-cyan-300/20 bg-cyan-300/5 p-2 text-xs text-cyan-200">
+          {message}
+        </div>
+      )}
 
-            <div className="flex items-center gap-3">
-              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                incident.severity === "critical"
-                  ? "bg-red-500/15 text-red-400"
-                  : incident.severity === "warning"
-                    ? "bg-orange-400/10 text-orange-400"
-                    : "bg-cyan-300/10 text-cyan-300"
-              }`}>
-                {incident.severity === "critical" ? (
-                  <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1, repeat: Infinity }}>
-                    <AlertTriangle size={17} />
-                  </motion.div>
-                ) : (
-                  <Activity size={17} />
+      <div className="space-y-3">
+        {realIncidents.length === 0 ? (
+          <p className="text-sm text-slate-400">No incidents found.</p>
+        ) : (
+          realIncidents.map((incident) => {
+            const assignedWorker = realWorkers.find(
+              (worker) => worker.id === incident.assigned_worker_id
+            );
+
+            return (
+              <div
+                key={incident.id}
+                className="rounded-xl border border-white/10 bg-white/[0.025] p-3.5"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-white">
+                      Sensor: {incident.sensor_id}
+                    </div>
+                    <p className="mt-1 break-words text-xs text-slate-400">
+                      {incident.description}
+                    </p>
+                    <p className="mt-2 text-[10px] text-cyan-300">
+                      Status: {incident.status}
+                    </p>
+                    {assignedWorker && (
+                      <p className="mt-1 text-[10px] text-emerald-300">
+                        Assigned to: {assignedWorker.name}
+                      </p>
+                    )}
+                  </div>
+                  <span className="shrink-0 rounded-full bg-orange-400/10 px-2 py-1 text-[9px] text-orange-300">
+                    {incident.status}
+                  </span>
+                </div>
+
+                {["OPEN", "DETECTED", "REOPENED", "ASSIGNED"].includes(incident.status) && (
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <select
+                      value={selectedWorkers[incident.id] ?? incident.assigned_worker_id ?? ""}
+                      onChange={(event) =>
+                        setSelectedWorkers((current) => ({
+                          ...current,
+                          [incident.id]: event.target.value,
+                        }))
+                      }
+                      className="min-w-0 flex-1 rounded-lg border border-white/10 bg-[#07121b] px-3 py-2 text-xs text-white outline-none"
+                    >
+                      <option value="">Select a worker</option>
+                      {realWorkers.map((worker) => (
+                        <option key={worker.id} value={worker.id}>
+                          {worker.name} — {worker.role}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      disabled={assigningId === incident.id}
+                      onClick={() => assignWorker(incident.id)}
+                      className="rounded-lg bg-cyan-300 px-4 py-2 text-xs font-bold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-50"
+                    >
+                      {assigningId === incident.id ? "Assigning..." : "Assign Worker"}
+                    </button>
+                  </div>
                 )}
               </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-bold text-white">{incident.id}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[8px] font-bold ${
-                    incident.severity === "critical"
-                      ? "bg-red-500/20 text-red-400"
-                      : incident.severity === "warning"
-                        ? "bg-orange-400/15 text-orange-400"
-                        : "bg-white/10 text-slate-400"
-                  }`}>{incident.type}</span>
-                </div>
-                <div className="mt-0.5 text-[10px] text-slate-500">{incident.sector}</div>
-              </div>
-            </div>
-
-            <div className="mt-2.5">
-              <div className="flex items-center justify-between text-[9px] mb-1">
-                <span className="text-slate-500">Probability</span>
-                <span className={`font-bold ${incident.severity === "critical" ? "text-red-400" : incident.severity === "warning" ? "text-orange-400" : "text-slate-400"}`}>{incident.probability}</span>
-              </div>
-              <div className="h-1 w-full rounded-full bg-white/5">
-                <div
-                  className={`h-full rounded-full ${incident.severity === "critical" ? "bg-red-400 shadow-[0_0_6px_#ef4444]" : incident.severity === "warning" ? "bg-orange-400" : "bg-cyan-300/50"}`}
-                  style={{ width: incident.probability }}
-                />
-              </div>
-            </div>
-
-            <div className="mt-2 flex items-center justify-between">
-              <span className="text-[8px] text-slate-600">{incident.time}</span>
-              {incident.severity === "critical" && (
-                <span className="flex items-center gap-1 text-[8px] text-red-400">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
-                  Monitoring
-                </span>
-              )}
-            </div>
-          </motion.div>
-        ))}
+            );
+          })
+        )}
       </div>
     </Glass>
   );
@@ -1048,7 +1104,7 @@ function WorkersPanel() {
 
               <div className="mt-1 text-xs text-slate-300">
                 {worker.incident}
-                {worker.sector !== "—" && ` · ${worker.sector}`}
+                {worker.sector !== "â€”" && ` Â· ${worker.sector}`}
               </div>
             </div>
 
@@ -1202,7 +1258,20 @@ function AIAssistant() {
 /* MAIN DASHBOARD */
 /* ----------------------------- */
 
-function Dashboard() {
+function Dashboard({
+  dashboardData,
+}: {
+  dashboardData: {
+    workers: { id: string; name: string; role: string; status: string }[];
+    incidents: {
+      id: string;
+      sensor_id: string;
+      description: string;
+      status: string;
+      assigned_worker_id: string | null;
+    }[];
+  } | null;
+}) {
   return (
     <>
       <Hero />
@@ -1213,7 +1282,7 @@ function Dashboard() {
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr_1fr_.85fr]">
           <FlowAnalytics />
           <NetworkMap />
-          <IncidentsPanel />
+          <IncidentsPanel incidents={dashboardData?.incidents ?? []} workers={dashboardData?.workers ?? []} />
         </div>
 
         <WorkersPanel />
@@ -1362,6 +1431,37 @@ export default function Home() {
   const [current, setCurrent] = useState<Page>("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const [dashboardData, setDashboardData] = useState<{
+    workers: { id: string; name: string; role: string; status: string }[];
+    incidents: {
+      id: string;
+      sensor_id: string;
+      description: string;
+      status: string;
+      assigned_worker_id: string | null;
+    }[];
+  } | null>(null);
+
+  useEffect(() => {
+    async function loadDashboard() {
+      try {
+        const response = await fetch("/api/dashboard");
+        const result = await response.json();
+
+        if (result.success) {
+          setDashboardData({
+            workers: result.workers ?? [],
+            incidents: result.incidents ?? [],
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error);
+      }
+    }
+
+    loadDashboard();
+  }, []);
+
   const pageIcons: Record<Page, LucideIcon> = {
     Dashboard: LayoutDashboard,
     "Live Network": Activity,
@@ -1392,7 +1492,7 @@ export default function Home() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <Dashboard />
+              <Dashboard dashboardData={dashboardData} />
             </motion.div>
           ) : (
             <motion.div
@@ -1412,3 +1512,8 @@ export default function Home() {
     </main>
   );
 }
+
+
+
+
+

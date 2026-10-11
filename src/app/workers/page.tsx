@@ -354,7 +354,12 @@ export default function WorkersPage() {
           </div>
 
           <div className="grid gap-5 xl:grid-cols-2">
-            {workers.map((worker, index) => (
+            {workers
+  .filter(
+    (worker, index, list) =>
+      list.findIndex((item) => item.name === worker.name) === index
+  )
+  .map((worker, index) => (
               <motion.div
                 key={worker.name}
                 initial={{ opacity: 0, y: 14 }}
